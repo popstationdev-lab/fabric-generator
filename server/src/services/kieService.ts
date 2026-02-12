@@ -4,8 +4,13 @@ import axios from 'axios';
 const KIE_API_BASE_URL = 'https://api.kie.ai/api/v1/jobs';
 const KIE_API_KEY = process.env.KIE_AI_API_KEY;
 
-export const generateImage = async (prompt: string, referenceImageUrl: string) => {
+export const generateImage = async (prompt: string, referenceImageUrl: string, ...additionalImageUrls: (string | undefined)[]) => {
     if (!KIE_API_KEY) throw new Error('KIE_AI_API_KEY is not configured');
+
+    const imageInputs = [referenceImageUrl];
+    additionalImageUrls.forEach(url => {
+        if (url) imageInputs.push(url);
+    });
 
     try {
         const response = await axios.post(
@@ -14,7 +19,7 @@ export const generateImage = async (prompt: string, referenceImageUrl: string) =
                 model: 'nano-banana-pro',
                 input: {
                     prompt,
-                    image_input: referenceImageUrl ? [referenceImageUrl] : [],
+                    image_input: imageInputs,
                     aspect_ratio: '3:4', // Portrait
                     resolution: '1K',
                     output_format: 'png'

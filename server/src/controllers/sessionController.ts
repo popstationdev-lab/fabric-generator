@@ -7,9 +7,28 @@ import axios from 'axios';
 
 // Helper to sanitize filename for Supabase storage
 const sanitizeFilename = (filename: string): string => {
-    return filename
-        .replace(/[^a-zA-Z0-9.\-_]/g, '_') // Replace any character that is not alphanumeric, dot, hyphen, or underscore with underscore
-        .replace(/_{2,}/g, '_'); // Replace multiple consecutive underscores with a single one
+    // 1. Get extension safely
+    const parts = filename.split('.');
+    let ext = "";
+    let base = filename;
+
+    const possibleExt = parts[parts.length - 1]?.toLowerCase();
+    const commonExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'pdf'];
+
+    if (parts.length > 1 && commonExtensions.includes(possibleExt!)) {
+        ext = parts.pop() || "";
+        base = parts.join('.');
+    }
+
+    // 2. Sanitize: replace spaces and special chars with underscore
+    const sanitizedBase = base
+        .replace(/\s+/g, '_') // Replace all spaces with underscores
+        .replace(/[^a-zA-Z0-9.\-_]/g, '_')
+        .replace(/_{2,}/g, '_')
+        .replace(/^_|_$/g, '');
+
+    const finalName = ext ? `${sanitizedBase}.${ext}` : sanitizedBase;
+    return finalName || 'uploaded_image';
 };
 
 // Helper to upload file to Supabase
@@ -51,26 +70,90 @@ const downloadAndUploadImage = async (url: string, jobId: string, index: number)
 
 export const uploadSwatch = async (req: Request, res: Response): Promise<void> => {
     try {
-        const file = req.file;
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const { sessionId, type } = req.body;
+
+        const file = files && files[type === 'silhouette' ? 'silhouette' : 'swatch']
+            ? files[type === 'silhouette' ? 'silhouette' : 'swatch'][0]
+            : null;
+
         if (!file) {
             res.status(400).json({ error: 'No file uploaded' });
             return;
         }
 
+        const bucket = type === 'silhouette' ? 'silhouettes' : 'swatches';
+
         const safeFilename = sanitizeFilename(file.originalname);
         const filename = `${Date.now()}_${safeFilename}`;
-        const swatchUrl = await uploadToSupabase(file, 'swatches', filename);
+        const imageUrl = await uploadToSupabase(file, bucket, filename);
 
-        const session = await prisma.session.create({
-            data: {
-                swatchUrl,
-            },
-        });
+        let session;
+        if (sessionId) {
+            session = await prisma.session.update({
+                where: { id: sessionId },
+                data: type === 'silhouette' ? { silhouetteUrl: imageUrl } : { swatchUrl: imageUrl },
+            });
+        } else {
+            session = await prisma.session.create({
+                data: type === 'silhouette' ? { silhouetteUrl: imageUrl, swatchUrl: '' } : { swatchUrl: imageUrl },
+            });
+        }
 
-        res.json({ ok: true, sessionId: session.id, swatchUrl });
+        res.json({ ok: true, sessionId: session.id, url: imageUrl });
     } catch (error) {
         console.error('Upload error:', error);
-        res.status(500).json({ error: 'Failed to upload swatch' });
+        res.status(500).json({ error: 'Failed to upload image' });
+    }
+};
+
+export const uploadSwatchByUrl = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { url, sessionId, type } = req.body;
+        if (!url) {
+            res.status(400).json({ error: 'URL is required' });
+            return;
+        }
+
+        const bucket = type === 'silhouette' ? 'silhouettes' : 'swatches';
+
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(response.data, 'binary');
+        const contentType = response.headers['content-type'] || 'image/jpeg';
+
+        const urlPath = new URL(url).pathname;
+        const baseName = urlPath.split('/').pop() || 'image.jpg';
+        const safeFilename = sanitizeFilename(baseName);
+        const filename = `${Date.now()}_${safeFilename}`;
+
+        const { error } = await supabase.storage
+            .from(bucket)
+            .upload(filename, buffer, {
+                contentType,
+                upsert: true,
+            });
+
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filename);
+        const imageUrl = publicUrlData.publicUrl;
+
+        let session;
+        if (sessionId) {
+            session = await prisma.session.update({
+                where: { id: sessionId },
+                data: type === 'silhouette' ? { silhouetteUrl: imageUrl } : { swatchUrl: imageUrl },
+            });
+        } else {
+            session = await prisma.session.create({
+                data: type === 'silhouette' ? { silhouetteUrl: imageUrl, swatchUrl: '' } : { swatchUrl: imageUrl },
+            });
+        }
+
+        res.json({ ok: true, sessionId: session.id, url: imageUrl });
+    } catch (error) {
+        console.error('URL upload error:', error);
+        res.status(500).json({ error: 'Failed to upload image from URL' });
     }
 };
 
@@ -112,8 +195,11 @@ export const generateImages = async (req: Request, res: Response): Promise<void>
 
         // Call KIE API for each pose
         const taskPromises = poses.map(pose => {
-            const posePrompt = `${prompt}. Model pose: ${pose}.`;
-            return generateImage(posePrompt, session.swatchUrl);
+            let posePrompt = `${prompt}. Model pose: ${pose}. Strictly use the FIRST reference image for fabric texture/color.`;
+            if (session.silhouetteUrl) {
+                posePrompt += ` Strictly use the SECOND reference image for the exact garment silhouette and structure. The final output must match the shape of the second image perfectly.`;
+            }
+            return generateImage(posePrompt, session.swatchUrl, session.silhouetteUrl || undefined);
         });
 
         const kieResponses = await Promise.all(taskPromises);
@@ -129,9 +215,58 @@ export const generateImages = async (req: Request, res: Response): Promise<void>
         });
 
         res.json({ ok: true, jobId: job.id });
-    } catch (error) {
+    } catch (error: any) {
         console.error('Generation error:', error);
-        res.status(500).json({ error: 'Failed to start generation' });
+        res.status(500).json({ error: error.message || 'Failed to start generation' });
+    }
+};
+
+export const refineImage = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { sessionId, imageUrl, prompt, index } = req.body;
+
+        if (!sessionId || !imageUrl || !prompt) {
+            res.status(400).json({ error: 'Session ID, Image URL, and prompt are required' });
+            return;
+        }
+
+        const session = await prisma.session.findUnique({ where: { id: sessionId } });
+        if (!session) {
+            res.status(404).json({ error: 'Session not found' });
+            return;
+        }
+
+        // Create a job for refinement
+        const job = await prisma.job.create({
+            data: {
+                sessionId,
+                status: 'PENDING',
+            },
+        });
+
+        // Call KIE API with the generated image as a reference
+        // Order: [Refined Base (1), Swatch (2), Silhouette (3)]
+        let refinePromptStrict = `${prompt}. Maintain the fabric texture from the second reference and strictly follow the garment design from the third reference image.`;
+
+        const kieResponse = await generateImage(
+            refinePromptStrict,
+            imageUrl, // 1. Current generated image as base
+            session.swatchUrl, // 2. Original swatch
+            session.silhouetteUrl || undefined // 3. Original silhouette
+        );
+
+        await prisma.job.update({
+            where: { id: job.id },
+            data: {
+                kieJobId: kieResponse.taskId,
+                status: 'PROCESSING',
+            },
+        });
+
+        res.json({ ok: true, jobId: job.id, index });
+    } catch (error: any) {
+        console.error('Refinement error:', error);
+        res.status(500).json({ error: error.message || 'Failed to start refinement' });
     }
 };
 

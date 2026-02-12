@@ -9,14 +9,19 @@ import { Label } from "@/components/ui/label";
 import {
   FormConfig,
   FABRIC_TYPES,
+  GARMENT_TYPES,
   LIGHTINGS,
   BACKGROUNDS,
   FITS,
+  UNITS,
   FabricType,
+  GarmentType,
   Lighting,
   Background,
   Fit,
+  MeasurementUnit,
 } from "@/lib/types";
+import { Input } from "@/components/ui/input";
 
 interface ConfigFormProps {
   config: FormConfig;
@@ -36,6 +41,16 @@ export function ConfigForm({ config, onChange }: ConfigFormProps) {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {FABRIC_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Garment Type</Label>
+        <Select value={config.garmentType} onValueChange={(v) => update("garmentType", v as GarmentType)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {GARMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -68,6 +83,36 @@ export function ConfigForm({ config, onChange }: ConfigFormProps) {
             {FITS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="col-span-2 grid grid-cols-3 gap-4 border-t pt-4 mt-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Repeat Width</Label>
+          <Input
+            type="number"
+            placeholder="Width"
+            value={config.repeatWidth || ""}
+            onChange={(e) => update("repeatWidth", e.target.value ? Number(e.target.value) : undefined)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Repeat Height</Label>
+          <Input
+            type="number"
+            placeholder="Height"
+            value={config.repeatHeight || ""}
+            onChange={(e) => update("repeatHeight", e.target.value ? Number(e.target.value) : undefined)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit</Label>
+          <Select value={config.repeatUnit} onValueChange={(v) => update("repeatUnit", v as MeasurementUnit)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {UNITS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="col-span-2 space-y-1.5">

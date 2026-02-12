@@ -2,12 +2,18 @@ export type FabricType = "Cotton" | "Linen" | "Silk" | "Denim" | "Polyester" | "
 export type Lighting = "Studio" | "Natural" | "Warm" | "Cool" | "Dramatic";
 export type Background = "White Studio" | "Grey Gradient" | "Outdoor" | "Minimalist";
 export type Fit = "Slim" | "Regular" | "Relaxed" | "Oversized";
+export type GarmentType = "Shirt" | "Jeans" | "Jacket" | "Overshirt";
+export type MeasurementUnit = "cm" | "inches";
 
 export interface FormConfig {
   fabricType: FabricType;
+  garmentType: GarmentType;
   lighting: Lighting;
   background: Background;
   fit: Fit;
+  repeatWidth?: number;
+  repeatHeight?: number;
+  repeatUnit: MeasurementUnit;
 }
 
 export interface GenerationState {
@@ -17,9 +23,11 @@ export interface GenerationState {
 }
 
 export const FABRIC_TYPES: FabricType[] = ["Cotton", "Linen", "Silk", "Denim", "Polyester", "Wool", "Tweed", "Velvet"];
+export const GARMENT_TYPES: GarmentType[] = ["Shirt", "Jeans", "Jacket", "Overshirt"];
 export const LIGHTINGS: Lighting[] = ["Studio", "Natural", "Warm", "Cool", "Dramatic"];
 export const BACKGROUNDS: Background[] = ["White Studio", "Grey Gradient", "Outdoor", "Minimalist"];
 export const FITS: Fit[] = ["Slim", "Regular", "Relaxed", "Oversized"];
+export const UNITS: MeasurementUnit[] = ["cm", "inches"];
 
 export const POSE_INSTRUCTIONS = [
   "standing front view, hands relaxed at sides",
@@ -29,5 +37,11 @@ export const POSE_INSTRUCTIONS = [
 ];
 
 export function buildPrompt(config: FormConfig): string {
-  return `A photorealistic product image of a male model wearing a ${config.fit.toLowerCase()} fit garment made from ${config.fabricType.toLowerCase()} fabric. The garment should accurately replicate the texture, color, and pattern of the provided fabric swatch. ${config.lighting} lighting, ${config.background.toLowerCase()} background. High-end fashion photography, editorial quality, 8K resolution.`;
+  const article = config.garmentType === "Jeans" ? "" : "a ";
+  const garment = config.garmentType.toLowerCase();
+  let repeatInfo = "";
+  if (config.repeatWidth && config.repeatHeight) {
+    repeatInfo = ` The fabric pattern repeat size is ${config.repeatWidth}x${config.repeatHeight} ${config.repeatUnit}.`;
+  }
+  return `Product photography of ${article}${config.fit.toLowerCase()} fit ${garment}. The garment is strictly ${config.garmentType} style. Fabric: ${config.fabricType}. ${repeatInfo} The ${garment} must look exactly like it is made from the provided fabric swatch, matching its pattern, texture, and color perfectly. Lighting: ${config.lighting}. Background: ${config.background.toLowerCase()}. High-end fashion editorial, 8K, commercial quality.`;
 }

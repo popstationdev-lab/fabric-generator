@@ -8,13 +8,14 @@ datasource db {
 }
 
 model Session {
-  id         String   @id @default(uuid())
-  createdAt  DateTime @default(now())
-  swatchUrl  String
-  promptText String?
-  options    Json?
-  consent    Boolean  @default(false)
-  jobs       Job[]
+  id            String   @id @default(uuid())
+  createdAt     DateTime @default(now())
+  swatchUrl     String
+  silhouetteUrl String?
+  promptText    String?
+  options       Json?
+  consent       Boolean  @default(false)
+  jobs          Job[]
 }
 
 model Job {
