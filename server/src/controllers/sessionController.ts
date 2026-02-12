@@ -5,6 +5,13 @@ import { supabase } from '../utils/supabase';
 import { generateImage, getJobStatus as getKieJobStatus } from '../services/kieService';
 import axios from 'axios';
 
+// Helper to sanitize filename for Supabase storage
+const sanitizeFilename = (filename: string): string => {
+    return filename
+        .replace(/[^a-zA-Z0-9.\-_]/g, '_') // Replace any character that is not alphanumeric, dot, hyphen, or underscore with underscore
+        .replace(/_{2,}/g, '_'); // Replace multiple consecutive underscores with a single one
+};
+
 // Helper to upload file to Supabase
 const uploadToSupabase = async (file: Express.Multer.File, bucket: string, path: string) => {
     const { data, error } = await supabase.storage
@@ -50,7 +57,8 @@ export const uploadSwatch = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        const filename = `${Date.now()}_${file.originalname}`;
+        const safeFilename = sanitizeFilename(file.originalname);
+        const filename = `${Date.now()}_${safeFilename}`;
         const swatchUrl = await uploadToSupabase(file, 'swatches', filename);
 
         const session = await prisma.session.create({
