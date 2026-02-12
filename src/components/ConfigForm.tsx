@@ -84,6 +84,15 @@ export function ConfigForm({ config, onChange }: ConfigFormProps) {
           </SelectContent>
         </Select>
       </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Number of Generations</Label>
+        <Select value={config.numGenerations.toString()} onValueChange={(v) => update("numGenerations", Number(v))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={n.toString()}>{n} Image{n > 1 ? "s" : ""}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="col-span-2 grid grid-cols-3 gap-4 border-t pt-4 mt-2">
         <div className="space-y-1.5">

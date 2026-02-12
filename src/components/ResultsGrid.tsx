@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Download, Loader2, Wand2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -11,7 +12,10 @@ interface ResultsGridProps {
 const POSE_LABELS = ["Front View", "Three-Quarter", "Side Profile", "Back View"];
 
 export function ResultsGrid({ images, status, onEdit }: ResultsGridProps) {
+  const [downloadingIndices, setDownloadingIndices] = useState<Set<number>>(new Set());
+
   const downloadImage = async (url: string, index: number) => {
+    setDownloadingIndices(prev => new Set(prev).add(index));
     const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
     try {
       const res = await fetch(`${apiUrl}/proxy-image?url=${encodeURIComponent(url)}`);
@@ -25,6 +29,12 @@ export function ResultsGrid({ images, status, onEdit }: ResultsGridProps) {
       URL.revokeObjectURL(a.href);
     } catch (error) {
       console.error("Failed to download image", error);
+    } finally {
+      setDownloadingIndices(prev => {
+        const next = new Set(prev);
+        next.delete(index);
+        return next;
+      });
     }
   };
 
@@ -74,8 +84,13 @@ export function ResultsGrid({ images, status, onEdit }: ResultsGridProps) {
                     variant="secondary"
                     className="h-9 w-9 rounded-full shadow-lg hover:scale-110 transition-transform"
                     onClick={() => downloadImage(url, index)}
+                    disabled={downloadingIndices.has(index)}
                   >
-                    <Download className="h-4 w-4" />
+                    {downloadingIndices.has(index) ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </>

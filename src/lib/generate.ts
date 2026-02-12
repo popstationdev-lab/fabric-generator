@@ -7,7 +7,8 @@ export async function generateImages(
   file: File | string,
   prompt: string,
   onImageReady: (index: number, url: string) => void,
-  silhouette?: File | string
+  silhouette?: File | string,
+  numGenerations: number = 4
 ): Promise<{ imageUrls: string[]; sessionId: string }> {
 
   // 1. Upload Swatch and Silhouette
@@ -55,6 +56,7 @@ export async function generateImages(
   const generateRes = await axios.post(`${API_BASE_URL}/session/generate`, {
     sessionId,
     prompt,
+    numGenerations,
     options: {}, // Options can be passed if needed
     silhouetteUrl // Backend should use this if provided
   });

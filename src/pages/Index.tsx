@@ -26,6 +26,7 @@ const DEFAULT_CONFIG: FormConfig = {
   background: "White Studio",
   fit: "Regular",
   repeatUnit: "cm",
+  numGenerations: 4,
 };
 
 export default function Index() {
@@ -52,6 +53,7 @@ export default function Index() {
 
   const [globalRefinementPrompt, setGlobalRefinementPrompt] = useState("");
   const [isGlobalRefining, setIsGlobalRefining] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Update prompt when config changes
   useEffect(() => {
@@ -80,7 +82,7 @@ export default function Index() {
     if (!file) return;
 
     setView("results");
-    setGeneration({ status: "generating", images: [null, null, null, null] });
+    setGeneration({ status: "generating", images: new Array(config.numGenerations).fill(null) });
 
     try {
       // Need a way to get sessionId back from generateImages if we want to reuse it for refinement
@@ -95,7 +97,7 @@ export default function Index() {
           images[index] = url;
           return { ...prev, images };
         });
-      }, silhouetteFile || undefined);
+      }, silhouetteFile || undefined, config.numGenerations);
 
       // We don't have sessionId here easily unless we change the return type of generateImages
       // But we can fetch it from the first generation result's metadata if needed, 
@@ -105,7 +107,7 @@ export default function Index() {
       setSessionId(res.sessionId);
 
       setGeneration((prev) => ({ ...prev, status: "done" }));
-      toast({ title: "Generation complete", description: "Your 4 product images are ready!" });
+      toast({ title: "Generation complete", description: `Your ${config.numGenerations} product images are ready!` });
     } catch (err: any) {
       const { message, isInsufficientCredits } = getErrorMessage(err);
 
@@ -166,7 +168,7 @@ export default function Index() {
     const currentImages = [...generation.images];
 
     // Set all to loading
-    setGeneration(prev => ({ ...prev, images: [null, null, null, null] }));
+    setGeneration(prev => ({ ...prev, images: new Array(currentImages.length).fill(null) }));
 
     try {
       const promises = currentImages.map((url, index) => {
@@ -199,6 +201,7 @@ export default function Index() {
     const images = generation.images.filter(Boolean) as string[];
     if (images.length === 0) return;
 
+    setIsDownloading(true);
     const zip = new JSZip();
     const labels = ["front-view", "three-quarter", "side-profile", "back-view"];
 
@@ -230,17 +233,18 @@ export default function Index() {
     a.download = "fabricviz-images.zip";
     a.click();
     URL.revokeObjectURL(a.href);
+    setIsDownloading(false);
   }, [generation.images]);
 
   const handleGenerateAgain = useCallback(() => {
     setView("configure");
-    setGeneration({ status: "idle", images: [null, null, null, null] });
+    setGeneration({ status: "idle", images: new Array(config.numGenerations).fill(null) });
     setFile(null);
     setPreview(null);
     setSilhouetteFile(null);
     setSilhouettePreview(null);
     setSessionId(null);
-  }, []);
+  }, [config.numGenerations]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -439,8 +443,16 @@ export default function Index() {
                         <RotateCcw className="h-4 w-4 mr-1" /> Generate Again
                       </Button>
                       {generation.status === "done" && (
-                        <Button onClick={handleDownloadAll}>
-                          <Download className="h-4 w-4 mr-1" /> Download All as ZIP
+                        <Button onClick={handleDownloadAll} disabled={isDownloading}>
+                          {isDownloading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Preparing ZIP...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-1" /> Download All as ZIP
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>

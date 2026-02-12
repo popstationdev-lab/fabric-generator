@@ -159,7 +159,7 @@ export const uploadSwatchByUrl = async (req: Request, res: Response): Promise<vo
 
 export const generateImages = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { sessionId, prompt, options } = req.body;
+        const { sessionId, prompt, options, numGenerations = 4 } = req.body;
 
         if (!sessionId || !prompt) {
             res.status(400).json({ error: 'Session ID and prompt are required' });
@@ -186,12 +186,14 @@ export const generateImages = async (req: Request, res: Response): Promise<void>
             },
         });
 
-        const poses = [
+        const allPoses = [
             "standing front view, hands relaxed at sides",
             "three-quarter view, one hand in pocket",
             "side profile view, walking pose",
             "standing back view, looking over shoulder",
         ];
+
+        const poses = allPoses.slice(0, numGenerations);
 
         // Call KIE API for each pose
         const taskPromises = poses.map(pose => {
