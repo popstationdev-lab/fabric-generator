@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  createdAt  DateTime @default(now())
+  swatchUrl  String
+  promptText String?
+  options    Json?
+  consent    Boolean  @default(false)
+  jobs       Job[]
+}
+
+model Job {
+  id        String    @id @default(uuid())
+  sessionId String
+  session   Session   @relation(fields: [sessionId], references: [id])
+  status    JobStatus @default(PENDING)
+  kieJobId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  images    Image[]
+}
+
+model Image {
+  id            String @id @default(uuid())
+  jobId         String
+  job           Job    @relation(fields: [jobId], references: [id])
+  url           String
+  seed          Int?
+  metadata      Json?
+  fidelityScore Float?
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
