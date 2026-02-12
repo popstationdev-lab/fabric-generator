@@ -77,9 +77,23 @@ export default function Index() {
 
     await Promise.all(
       images.map(async (url, i) => {
-        const res = await fetch(url);
-        const blob = await res.blob();
-        zip.file(`fabricviz-${labels[i]}.png`, blob);
+        const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+        try {
+          const res = await fetch(`${apiUrl}/proxy-image?url=${encodeURIComponent(url)}`);
+          if (!res.ok) throw new Error("Failed to fetch image via proxy");
+          const blob = await res.blob();
+          zip.file(`fabricviz-${labels[i]}.png`, blob);
+        } catch (e) {
+          console.error("Failed to download image", url, e);
+          // Fallback to direct fetch if proxy fails (though likely to fail CORS too)
+          try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            zip.file(`fabricviz-${labels[i]}.png`, blob);
+          } catch (e2) {
+            console.error("Direct fetch also failed", e2);
+          }
+        }
       })
     );
 

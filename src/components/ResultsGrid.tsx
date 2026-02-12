@@ -11,13 +11,20 @@ const POSE_LABELS = ["Front View", "Three-Quarter", "Side Profile", "Back View"]
 
 export function ResultsGrid({ images, status }: ResultsGridProps) {
   const downloadImage = async (url: string, index: number) => {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `fabricviz-${POSE_LABELS[index].toLowerCase().replace(/\s/g, "-")}.png`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api";
+    try {
+      const res = await fetch(`${apiUrl}/proxy-image?url=${encodeURIComponent(url)}`);
+      if (!res.ok) throw new Error("Failed to fetch image via proxy");
+      const blob = await res.blob();
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `fabricviz-${POSE_LABELS[index].toLowerCase().replace(/\s/g, "-")}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (error) {
+      console.error("Failed to download image", error);
+    }
   };
 
   return (
