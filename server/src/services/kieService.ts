@@ -16,12 +16,11 @@ export const generateImage = async (prompt: string, referenceImageUrl: string, .
         const response = await axios.post(
             `${KIE_API_BASE_URL}/createTask`,
             {
-                model: 'nano-banana-pro',
+                model: 'google/nano-banana-edit',
                 input: {
                     prompt,
-                    image_input: imageInputs,
-                    aspect_ratio: '3:4', // Portrait
-                    resolution: '1K',
+                    image_urls: imageInputs,
+                    image_size: '3:4',
                     output_format: 'png'
                 }
             },

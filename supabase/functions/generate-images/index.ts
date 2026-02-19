@@ -9,12 +9,11 @@ const corsHeaders = {
 };
 
 interface CreateTaskRequest {
-  model: "nano-banana-pro";
+  model: "google/nano-banana-edit";
   input: {
     prompt: string;
-    image_input?: string[];
-    aspect_ratio?: string;
-    resolution?: string;
+    image_urls: string[];
+    image_size?: string;
     output_format?: string;
   };
   callBackUrl?: string;
@@ -63,13 +62,12 @@ serve(async (req) => {
     }
 
     // 1. Create Generation Task
-    const createReq: CreateTaskRequest = {
-      model: "nano-banana-pro",
+    const createReq = {
+      model: "google/nano-banana-edit",
       input: {
         prompt,
-        image_input: final_image_input,
-        aspect_ratio,
-        resolution,
+        image_urls: final_image_input,
+        image_size: aspect_ratio === "3:4" ? "3:4" : aspect_ratio, // Map aspect_ratio to image_size
         output_format
       }
     };

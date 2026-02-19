@@ -2,7 +2,7 @@ export type FabricType = "Cotton" | "Linen" | "Silk" | "Denim" | "Polyester" | "
 export type Lighting = "Studio" | "Natural" | "Warm" | "Cool" | "Dramatic";
 export type Background = "White Studio" | "Grey Gradient" | "Outdoor" | "Minimalist";
 export type Fit = "Slim" | "Regular" | "Relaxed" | "Oversized";
-export type GarmentType = "Shirt" | "T-shirt" | "Polo" | "Jacket" | "Overshirt" | "Jeans" | "Trousers" | "Joggers";
+export type GarmentType = "Shirt" | "T-shirt" | "Polo" | "Jacket" | "Overshirt" | "Jeans" | "Trousers" | "Joggers" | "Shorts";
 export type MeasurementUnit = "cm" | "inches";
 
 export interface FormConfig {
@@ -24,7 +24,7 @@ export interface GenerationState {
 }
 
 export const FABRIC_TYPES: FabricType[] = ["Cotton", "Linen", "Silk", "Denim", "Polyester", "Wool", "Tweed", "Velvet"];
-export const GARMENT_TYPES: GarmentType[] = ["Shirt", "T-shirt", "Polo", "Jacket", "Overshirt", "Jeans", "Trousers", "Joggers"];
+export const GARMENT_TYPES: GarmentType[] = ["Shirt", "T-shirt", "Polo", "Jacket", "Overshirt", "Jeans", "Trousers", "Joggers", "Shorts"];
 export const LIGHTINGS: Lighting[] = ["Studio", "Natural", "Warm", "Cool", "Dramatic"];
 export const BACKGROUNDS: Background[] = ["White Studio", "Grey Gradient", "Outdoor", "Minimalist"];
 export const FITS: Fit[] = ["Slim", "Regular", "Relaxed", "Oversized"];
